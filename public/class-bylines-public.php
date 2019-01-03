@@ -51,7 +51,14 @@ class Bylines_Public {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
+		$this->load_dependencies();
 
+	}
+
+	private function load_dependencies() {
+
+		/* Require template tag functions */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/template-tags.php';
 	}
 
 	/**
