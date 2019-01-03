@@ -122,7 +122,15 @@ class Bylines {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-bylines-public.php';
 
+		/**
+		 * Register custom taxonomys
+		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-bylines-taxonomy.php';
+
+		/**
+		 * Register helper functions
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/helpers.php';
 
 		$this->loader = new Bylines_Loader();
 

@@ -12,13 +12,22 @@
  * @subpackage Bylines/includes
  */
 
+ // Exit if accessed directly
+ defined( 'ABSPATH' ) || exit;
+
 class Bylines_Taxonomy {
 
 	/**
 	 * Taxonomy Name
 	 * @var string $taxonomy
 	 */
-	public $taxonomy = 'author';
+	public $author_taxonomy = 'guest-author';
+
+	/**
+	 * Taxonomy Args
+	 * @var array $author_args
+	 */
+	public $author_args;
 
 	/**
 	 * Post Types
@@ -26,6 +35,13 @@ class Bylines_Taxonomy {
 	 * @var array $post_types
 	 */
 	public $post_types = array( 'post', 'page', 'issue', 'book' );
+
+  /**
+   * Capabilities
+   *
+   * @var string $capabilities
+   */
+  public $capabilities;
 
 	/**
 	 * Constructor
@@ -44,6 +60,21 @@ class Bylines_Taxonomy {
 	 */
 	private function init() {
 		add_action( 'init', array( $this, 'register' ), 0 );
+    add_action( 'parent_file', array( $this, 'highlight_menu' ) );
+
+		$this->authors_taxonomy();
+		$this->load_dependencies();
+    $this->capabilities = 'edit_users';
+	}
+
+	/**
+	 * Load Dependencies
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public function load_dependencies() {
+		include_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-bylines-meta.php';
 	}
 
 	/**
@@ -53,20 +84,21 @@ class Bylines_Taxonomy {
 	 * @return void
 	 */
 	public function register() {
-		register_taxonomy( 'author', add_filters( 'bylines_supported_post_types', $this->post_types ), $args );
+		register_taxonomy( $this->author_taxonomy, apply_filters( 'bylines_supported_post_types', $this->post_types ), $this->author_args );
+		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 	}
 
 	/**
-	 * Labels
+	 * Author Taxonomy
 	 *
 	 * @since     1.0.0
-	 * @return array $labels
+	 * @return array $args
 	 */
-	public function labels() {
+	public function authors_taxonomy() {
 		$labels = array(
 			'name'                       => _x( 'Authors', 'Taxonomy General Name', 'bylines' ),
 			'singular_name'              => _x( 'Author', 'Taxonomy Singular Name', 'bylines' ),
-			'menu_name'                  => __( 'Taxonomy', 'bylines' ),
+			'menu_name'                  => __( 'Authors', 'bylines' ),
 			'all_items'                  => __( 'All Authors', 'bylines' ),
 			'parent_item'                => __( 'Parent Author', 'bylines' ),
 			'parent_item_colon'          => __( 'Parent Author:', 'bylines' ),
@@ -85,46 +117,68 @@ class Bylines_Taxonomy {
 			'items_list'                 => __( 'Authors list', 'bylines' ),
 			'items_list_navigation'      => __( 'Authors list navigation', 'bylines' ),
 		);
-		return add_filters( 'bylines_taxonomy_labels', $labels );
-	}
+		$labels = apply_filters( 'bylines_taxonomy_labels', $labels );
 
-	/**
-	 * Capabilies
-	 *
-	 * @since     1.0.0
-	 * @return array $capabilities
-	 */
-	public function capabilities() {
 		$capabilities = array(
 			'manage_terms'               => 'edit_users',
 			'edit_terms'                 => 'edit_users',
 			'delete_terms'               => 'delete_users',
 			'assign_terms'               => 'edit_posts',
 		);
-		return add_filters( 'bylines_taxonomy_capabilities', $capabilities );
-	}
+		$capabilities = apply_filters( 'bylines_taxonomy_capabilities', $capabilities );
 
-	/**
-	 * Args
-	 *
-	 * @since     1.0.0
-	 * @return array $args
-	 */
-	public function args() {
 		$args = array(
-			'labels'                     => $this->labels(),
+			'labels'                     => $labels,
 			'hierarchical'               => false,
 			'public'                     => true,
 			'show_ui'                    => true,
 			'show_admin_column'          => true,
 			'show_in_nav_menus'          => true,
+      'show_in_menu'               => false,
 			'show_tagcloud'              => true,
-			'capabilities'               => $this->capabilities(),
+			'capabilities'               => $capabilities,
 			'show_in_rest'               => true,
 			'rest_base'                  => 'authors',
+      'rewrite'                    => array( 'slug' => 'guest-author' ),
 		);
-		return add_filters( 'bylines_taxonomy_args', $args );
+		$this->author_args = apply_filters( 'bylines_taxonomy_args', $args );
 	}
+
+  /**
+   * Add Admin Menu
+   *
+   * @since 1.0.0
+   * @return void
+   */
+	public function add_admin_menu() {
+		add_menu_page(
+        __( 'Authors', 'bylines' ),
+        __( 'Authors', 'bylines' ),
+        $this->capabilities,
+        'edit-tags.php?taxonomy=guest-author',
+        '',
+        'dashicons-id',
+        apply_filters( 'bylines_taxonomy_menu_position', 65 )
+    );
+	}
+
+  /**
+   * Highlight the Admin Menu
+   *
+   * @since 1.0.0
+   * @param  string $parent_file
+   * @return string $parent_file
+   */
+  public function highlight_menu( $parent_file ) {
+    if ( get_current_screen()->taxonomy == 'guest-author' ) {
+      $parent_file = 'edit-tags.php?taxonomy=guest-author';
+    }
+    return $parent_file;
+  }
+
+  public function rewrite_rules() {
+    add_rewrite_rule( '^author/([0-9]+)/?', 'index.php?term_slug=$matches[1]', 'top' );
+  }
 
 }
 
