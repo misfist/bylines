@@ -51,7 +51,12 @@ class Bylines_Admin {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-		$this->load_dependencies();
+
+		if ( is_admin() ) {
+
+			$this->load_dependencies();
+
+		}
 
 	}
 
@@ -63,6 +68,7 @@ class Bylines_Admin {
 	 */
 	public function load_dependencies() {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-bylines-settings.php';
+		include_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-bylines-meta.php';
 	}
 
 	/**

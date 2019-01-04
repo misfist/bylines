@@ -74,7 +74,7 @@ class Bylines_Taxonomy {
 	 * @return void
 	 */
 	public function load_dependencies() {
-		include_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-bylines-meta.php';
+		// include_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-bylines-meta.php';
 	}
 
 	/**
@@ -107,6 +107,7 @@ class Bylines_Taxonomy {
 			'edit_item'                  => __( 'Edit Author', 'bylines' ),
 			'update_item'                => __( 'Update Author', 'bylines' ),
 			'view_item'                  => __( 'View Author', 'bylines' ),
+      'back_to_items'              => __( 'Back to Authors', 'bylines' ),
 			'separate_items_with_commas' => __( 'Separate authors with commas', 'bylines' ),
 			'add_or_remove_items'        => __( 'Add or remove authors', 'bylines' ),
 			'choose_from_most_used'      => __( 'Choose from the most used', 'bylines' ),
