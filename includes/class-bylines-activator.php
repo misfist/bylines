@@ -29,8 +29,6 @@ class Bylines_Activator {
 	 *
 	 * @since    1.0.0
 	 */
-	public static function activate() {
-
-	}
+	public static function activate() {}
 
 }

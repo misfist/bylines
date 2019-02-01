@@ -18,6 +18,24 @@
  class Bylines_Taxonomy_Meta {
 
    /**
+ 	 * The ID of this plugin.
+ 	 *
+ 	 * @since    1.0.0
+ 	 * @access   private
+ 	 * @var      string    $plugin_name    The ID of this plugin.
+ 	 */
+ 	private $plugin_name;
+
+  /**
+   * The version of this plugin.
+   *
+   * @since    1.0.0
+   * @access   private
+   * @var      string    $version    The current version of this plugin.
+   */
+  private $version;
+
+  /**
     * Taxonomy
     *
     * @since 1.0.0
@@ -36,7 +54,11 @@
 	 /**
 	  * Constructor
 	  */
- 	public function __construct( $taxonomy = null ) {
+ 	public function __construct( $plugin_name, $version, $taxonomy = null ) {
+
+    $this->plugin_name = $plugin_name;
+		$this->version = $version;
+
     add_action( $this->taxonomy . '_add_form_fields',  array( $this, 'create_screen_fields'), 10, 1 );
     add_action( $this->taxonomy . '_edit_form_fields', array( $this, 'edit_screen_fields' ),  10, 2 );
 
@@ -52,6 +74,8 @@
 
     add_action( 'admin_enqueue_scripts', array( $this, 'load_media' ) );
     add_action( 'admin_footer', array( $this, 'add_script' ) );
+
+    add_action( 'restrict_manage_posts', array( $this, 'admin_post_list_filters' ), 10, 2);
  	}
 
 	/**
@@ -261,60 +285,25 @@
  	}
 
   public function load_media() {
-     if( ! isset( $_GET['taxonomy'] ) || $_GET['taxonomy'] != $this->taxonomy ) {
+     if( ! isset( $_GET['taxonomy'] ) || $_GET['taxonomy'] !== $this->taxonomy ) {
        return;
      }
      wp_enqueue_media();
    }
 
   public function add_script() {
-     if( ! isset( $_GET['taxonomy'] ) || $_GET['taxonomy'] != $this->taxonomy ) {
+     if( ! isset( $_GET['taxonomy'] ) || $_GET['taxonomy'] !== $this->taxonomy ) {
        return;
-     } ?>
-     <script> jQuery(document).ready( function($) {
-       _wpMediaViewsL10n.insertIntoPost = '<?php _e( "Insert", "bylines" ); ?>';
-       function ct_media_upload(button_class) {
-         var _custom_media = true, _orig_send_attachment = wp.media.editor.send.attachment;
-         $('body').on('click', button_class, function(e) {
-           var button_id = '#'+$(this).attr('id');
-           var send_attachment_bkp = wp.media.editor.send.attachment;
-           var button = $(button_id);
-           _custom_media = true;
-           wp.media.editor.send.attachment = function(props, attachment){
-             if( _custom_media ) {
-               $( '#author_meta_image' ).val(attachment.id);
-               $( '#term-image-wrapper' ).html('<img class="custom_media_image" src="" style="margin:0;padding:0;max-height:100px;float:none;" />');
-               $( '#term-image-wrapper .custom_media_image' ).attr( 'src',attachment.url ).css( 'display','block' );
-             } else {
-               return _orig_send_attachment.apply( button_id, [props, attachment] );
-             }
-           }
-           wp.media.editor.open(button); return false;
-         });
-       }
+     }
 
-       ct_media_upload('.author-tax_media_button.button');
-       $('body').on('click','.author-tax_media_remove',function(){
-         $('#author_meta_image').val('');
-         $('#term-image-wrapper').html('<img class="custom_media_image" src="" style="margin:0;padding:0;max-height:100px;float:none;" />');
-       });
-       // Thanks: http://stackoverflow.com/questions/15281995/wordpress-create-category-ajax-response
-       $(document).ajaxComplete(function(event, xhr, settings) {
-         var queryStringArr = settings.data.split('&');
-         if( $.inArray('action=add-tag', queryStringArr) !== -1 ){
-           var xml = xhr.responseXML;
-           $response = $(xml).find('term_id').text();
-           if($response!=""){
-             // Clear the thumb image
-             $('#term-image-wrapper').html('');
-           }
-          }
-        });
-      });
-    </script>
-   <?php
- }
+     wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/bylines-admin.js', array( 'jquery', 'wp-i18n' ), $this->version, false );
+  }
 
+  /**
+   * Set up Custom Fields
+   *
+   * @return array
+   */
   public function set_fields() {
 
     $fields = array(
@@ -347,14 +336,27 @@
     return apply_filters( 'bylines_set_meta_fields', $fields );
   }
 
+  /**
+   * Add Filter to Replace Label Text
+   * @return void
+   */
   function modify_term_labels() {
     add_filter( 'gettext', array( $this, 'term_label_gettext' ), 10, 2 );
   }
-
+  /**
+   * Replace Label Text
+   *
+   * @param  string $translation
+   * @param  string $original
+   * @return string
+   */
   function term_label_gettext( $translation, $original ) {
     global $current_screen;
 
     if( 'edit-guest-author' === $current_screen->id ) {
+      if ( 'Name' == $original ) {
+          return __( 'Display Name', 'byline' );
+      }
       if ( 'Description' == $original ) {
           return __( 'Biographical Info', 'byline' );
       }
@@ -363,7 +365,41 @@
     return $translation;
   }
 
+  function admin_post_list_filters( $post_type, $which ) {
+
+    $post_types = get_post_types( array( 'public' => true ) );
+    if( !in_array( $post_type, $post_types ) ) {
+      return;
+    }
+
+  	// A list of taxonomy slugs to filter by
+  	$taxonomies = array( 'guest-author' );
+
+  	foreach ( $taxonomies as $taxonomy_slug ) {
+
+  		// Retrieve taxonomy data
+  		$taxonomy_obj = get_taxonomy( $taxonomy_slug );
+  		$taxonomy_name = $taxonomy_obj->labels->name;
+
+  		// Retrieve taxonomy terms
+  		$terms = get_terms( $taxonomy_slug );
+
+  		// Display filter HTML
+  		echo "<select name='{$taxonomy_slug}' id='{$taxonomy_slug}' class='postform'>";
+  		echo '<option value="">' . sprintf( esc_html__( 'All %s', 'bylines' ), $taxonomy_name ) . '</option>';
+  		foreach ( $terms as $term ) {
+  			printf(
+  				'<option value="%1$s" %2$s>%3$s (%4$s)</option>',
+  				$term->slug,
+  				( ( isset( $_GET[$taxonomy_slug] ) && ( $_GET[$taxonomy_slug] == $term->slug ) ) ? ' selected="selected"' : '' ),
+  				$term->name,
+  				$term->count
+  			);
+  		}
+  		echo '</select>';
+  	}
+
+  }
+
 
 }
-
- new Bylines_Taxonomy_Meta;

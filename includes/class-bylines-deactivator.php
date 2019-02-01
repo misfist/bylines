@@ -29,8 +29,6 @@ class Bylines_Deactivator {
 	 *
 	 * @since    1.0.0
 	 */
-	public static function deactivate() {
-
-	}
+	public static function deactivate() {}
 
 }

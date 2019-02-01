@@ -56,6 +56,7 @@ class Bylines_Admin {
 
 			$this->load_dependencies();
 
+			new Bylines_Taxonomy_Meta( $this->plugin_name, $this->version );
 		}
 
 	}
@@ -113,7 +114,7 @@ class Bylines_Admin {
 		 * class.
 		 */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/bylines-admin.js', array( 'jquery' ), $this->version, false );
+		// wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/bylines-admin.js', array( 'jquery', 'wp-i18n' ), $this->version, false );
 
 	}
 
